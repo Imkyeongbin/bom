@@ -10,6 +10,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.spring.bom.model.bro.User_info;
@@ -51,10 +52,11 @@ public class CoffeeController {
 //	}
 	
 	@GetMapping(value = "/coffee/logout")
-	public String logout(HttpServletRequest req) {
+//	public String logout(HttpServletRequest req) {	// 보일러 플레이트 코드, HttpSession만 받을 수 있음
+	public String logout(HttpSession session) {
 		String url = "redirect:/bro/index";
 		System.out.println("CoffeeController logout start..");
-		HttpSession session = req.getSession();
+//		HttpSession session = req.getSession();
 		User_info ui = null;
 		try {
 			ui = (User_info)session.getAttribute("login");
@@ -100,42 +102,116 @@ public class CoffeeController {
 		}
 		return ui.getUatid();
 	}
+	// req.getParameter 대신 @RequestParam으로 해결할 수 있음
+//	public String deleteBom(HttpSession session,
+//							@RequestParam("coffeeBoardBcode") int bcode,
+//							@RequestParam("coffeeBoardUatid") String delBoardUatid) {
+//
+//		User_Info ui = new User_Info();
+//		int bbcode = 0;
+//
+//		try {
+//			// 1. 세션에서 유저 정보 가져오기 (매개변수 session 활용)
+//			ui = (User_Info) session.getAttribute("user");
+//
+//			System.out.println("CoffeeController deleteBom bcode -> " + bcode);
+//			System.out.println("CoffeeController deleteBom login ucode -> " + ui.getUcode());
+//
+//			// 2. 로직 수행
+//			if(delBoardUatid.equals(ui.getUatid())) {
+//				bs.deleteBom(bcode);
+//			}
+//
+//			bbcode = Integer.parseInt(bs.selectBbcodeUpdate(bcode));
+//			System.out.println("CoffeeController deleteBom_singleboard bbcode -> " + bbcode);
+//
+//		} catch (Exception e) {
+//			System.out.println("CoffeeController deleteBom -> " + e.getMessage());
+//		}
+//
+//		return ui.getUatid();
+//	}
 	
-	@PostMapping(value = "/coffee/deleteBom_singleBoard")
-	public String deleteBom_singleBoard(HttpServletRequest req) {
-		String url = "redirect:/iron/singleBoard";
-		System.out.println("CoffeeController deleteBom_singleBoard start..");
-		HttpSession session = req.getSession();
-		int bcode = 0;
-		int bbcode = 0;
-		User_Info ui = new User_Info();
-		String delBoardUatid = "";
-		int originValue = 0;
-		try {
-			ui = (User_Info)session.getAttribute("user");
-			bcode = Integer.parseInt(req.getParameter("coffeeBoardBcode"));
-//			System.out.println("CoffeeController deleteBom_singleBoard 1");
-			delBoardUatid = req.getParameter("coffeeBoardUatid");
-//			System.out.println("CoffeeController deleteBom_singleBoard 2");
-			originValue = Integer.parseInt(req.getParameter("coffeeBoardOrigin"));	//singleBoard에서 최상위 글인 경우 1값을 가져온다.
-			System.out.println("CoffeeController deleteBom_singleBoard bcode->"+bcode);
-			System.out.println("CoffeeController deleteBom_singleBoard login ucode->"+ui.getUcode());
-			if(delBoardUatid.equals(ui.getUatid())) {	//지울 보드의 uatid가 로그인한 회원의 uatid와 동일하면 지운다.
+//	@PostMapping(value = "/coffee/deleteBom_singleBoard")
+//	public String deleteBom_singleBoard(HttpServletRequest req) {
+//		String url = "redirect:/iron/singleBoard";
+//		System.out.println("CoffeeController deleteBom_singleBoard start..");
+//		HttpSession session = req.getSession();
+//		int bcode = 0;
+//		int bbcode = 0;
+//		User_Info ui = new User_Info();
+//		String delBoardUatid = "";
+//		int originValue = 0;
+//		try {
+//			ui = (User_Info)session.getAttribute("user");
+//			bcode = Integer.parseInt(req.getParameter("coffeeBoardBcode"));
+////			System.out.println("CoffeeController deleteBom_singleBoard 1");
+//			delBoardUatid = req.getParameter("coffeeBoardUatid");
+////			System.out.println("CoffeeController deleteBom_singleBoard 2");
+//			originValue = Integer.parseInt(req.getParameter("coffeeBoardOrigin"));	//singleBoard에서 최상위 글인 경우 1값을 가져온다.
+//			System.out.println("CoffeeController deleteBom_singleBoard bcode->"+bcode);
+//			System.out.println("CoffeeController deleteBom_singleBoard login ucode->"+ui.getUcode());
+//			if(delBoardUatid.equals(ui.getUatid())) {	//지울 보드의 uatid가 로그인한 회원의 uatid와 동일하면 지운다.
+//				bs.deleteBom(bcode);
+//
+//			}
+//			bbcode = Integer.parseInt(bs.selectBbcodeUpdate(bcode));
+//			System.out.println("CoffeeController deleteBom_singleBoard bbcode->"+bbcode);
+//			if(originValue == 1) {
+//				url = "redirect:/iron/timeline";
+//			}else {
+//				url += "?bcode="+bbcode;
+//			}
+//		}catch (Exception e) {
+//			System.out.println("CoffeeController deleteBom_singleBoard Exception->"+e.getMessage());
+//		}
+//		return url;
+//	}
+
+
+@PostMapping(value = "/coffee/deleteBom_singleBoard")
+public String deleteBom_singleBoard(
+		HttpSession session,
+		@RequestParam("coffeeBoardBcode") int bcode,
+		@RequestParam("coffeeBoardUatid") String delBoardUatid,
+		@RequestParam("coffeeBoardOrigin") int originValue) {
+
+	String url = "redirect:/iron/singleBoard";
+	System.out.println("CoffeeController deleteBom_singleBoard start..");
+
+	// 초기화 및 지역 변수
+	int bbcode = 0;
+	User_Info ui = null;
+
+	try {
+		// 1. 세션에서 유저 정보 가져오기 (매개변수 session 활용)
+		ui = (User_Info) session.getAttribute("user");
+
+		if (ui != null) {
+			System.out.println("CoffeeController deleteBom_singleBoard bcode -> " + bcode);
+			System.out.println("CoffeeController deleteBom_singleBoard login ucode -> " + ui.getUcode());
+
+			// 2. 권한 체크 및 삭제 로직
+			if (delBoardUatid.equals(ui.getUatid())) {
 				bs.deleteBom(bcode);
-				
 			}
+
+			// 3. 후속 데이터 조회 및 URL 결정
 			bbcode = Integer.parseInt(bs.selectBbcodeUpdate(bcode));
-			System.out.println("CoffeeController deleteBom_singleBoard bbcode->"+bbcode);
-			if(originValue == 1) {
+			System.out.println("CoffeeController deleteBom_singleBoard bbcode -> " + bbcode);
+
+			if (originValue == 1) {
 				url = "redirect:/iron/timeline";
-			}else {
-				url += "?bcode="+bbcode;
+			} else {
+				url += "?bcode=" + bbcode;
 			}
-		}catch (Exception e) {
-			System.out.println("CoffeeController deleteBom_singleBoard Exception->"+e.getMessage());
 		}
-		return url;
+	} catch (Exception e) {
+		System.out.println("CoffeeController deleteBom_singleBoard Exception -> " + e.getMessage());
 	}
+
+	return url;
+}
 	
 	
 	
@@ -220,7 +296,8 @@ public class CoffeeController {
 		System.out.println(returnPage+" manager->"+ manager );
 		getLoginUserInfo(session, model, returnPage);
 		// 관리자면 
-		if (manager == "0") {
+//		if (manager == "0") {
+		if ("0".equals(manager)) {
 			List<CoffeeUser_info> list = uis.user_infoSensorList();
 //			System.out.println("list.get(0).getUcode()->"+list.get(0).getUcode());
 //			System.out.println("list.get(0).getUnickname()->"+list.get(0).getUnickname());
@@ -254,7 +331,7 @@ public class CoffeeController {
 		getLoginUserInfo(session, model, returnPage);
 
 		// 관리자면 
-		if (manager == "0") {
+		if ("0".equals(manager)) {
 			List<CoffeeUser_info> list = uis.user_infoSensorList(search);
 //			System.out.println("list.get(0).getUcode()->"+list.get(0).getUcode());
 //			System.out.println("list.get(0).getUnickname()->"+list.get(0).getUnickname());
@@ -340,7 +417,7 @@ public class CoffeeController {
 		System.out.println(returnPage+" manager->"+ manager );
 		getLoginUserInfo(session, model, returnPage);
 
-		if(manager == "0") {
+		if("0".equals(manager)) {
 			List<CoffeeUser_info> list = uis.user_infoRestoreList();
 			model.addAttribute("user_infoList", list);
 			// 실시간 해시태그 순위
@@ -363,7 +440,7 @@ public class CoffeeController {
 		System.out.println(returnPage+" manager->"+ manager );
 		getLoginUserInfo(session, model, returnPage);
 
-		if(manager == "0") {
+		if("0".equals(manager)) {
 			List<CoffeeUser_info> list = uis.user_infoRestoreList(search);
 			model.addAttribute("user_infoList", list);
 			model.addAttribute("search", search);
@@ -397,7 +474,7 @@ public class CoffeeController {
 		User_info ui = (User_info)session.getAttribute("login");
 		getLoginUserInfo(session, model, returnPage);
 
-		if(manager == "0") {
+		if("0".equals(manager)) {
 			List<CoffeeUser_info> list = uis.user_infoAccusationList();
 			model.addAttribute("user_infoList", list);
 			returnPage = "/coffee/accusationMemberManagerPage";
@@ -423,7 +500,7 @@ public class CoffeeController {
 
 		if (manager == null) manager = "9";
 		System.out.println("/coffee/accusationMemberManagerSearch manager->"+ manager );
-		if(manager == "0") {
+		if("0".equals(manager)) {
 			List<CoffeeUser_info> list = uis.user_infoAccusationList(search);
 			model.addAttribute("user_infoList", list);
 			model.addAttribute("search", search);
@@ -458,14 +535,14 @@ public class CoffeeController {
 		System.out.println(returnPage+" manager->"+ manager );
 		getLoginUserInfo(session, model, returnPage);
 
-		if(manager == "0") {
+		if("0".equals(manager)) {
 			List<BoardUser_info> list = bs.sensorList();
-			for (int i=0; i<list.size(); i++) {
-				if(list.get(i).getBattach()!= null) {
-					list.get(i).setBattachType(list.get(i).getBattach().substring(0, 5));
-					list.get(i).setBattachSrc(list.get(i).getBattach().substring(6));
-				}
-			}
+            for (BoardUser_info boardUserInfo : list) {
+                if (boardUserInfo.getBattach() != null) {
+                    boardUserInfo.setBattachType(boardUserInfo.getBattach().substring(0, 5));
+                    boardUserInfo.setBattachSrc(boardUserInfo.getBattach().substring(6));
+                }
+            }
 //			System.out.println("CoffeeController " +returnPage+ list.get(1).getBattach());
 //			System.out.println("CoffeeController " +returnPage+ list.get(1).getBattachSrc());
 			model.addAttribute("boardUser_infoList", list);
@@ -489,14 +566,14 @@ public class CoffeeController {
 		System.out.println(returnPage+" manager->"+ manager );
 		getLoginUserInfo(session, model, returnPage);
 
-		if(manager == "0") {
+		if("0".equals(manager)) {
 			List<BoardUser_info> list = bs.sensorList(search);
-			for (int i=0; i<list.size(); i++) {
-				if(list.get(i).getBattach()!= null) {
-					list.get(i).setBattachType(list.get(i).getBattach().substring(0, 5));
-					list.get(i).setBattachSrc(list.get(i).getBattach().substring(6));
-				}
-			}
+            for (BoardUser_info boardUserInfo : list) {
+                if (boardUserInfo.getBattach() != null) {
+                    boardUserInfo.setBattachType(boardUserInfo.getBattach().substring(0, 5));
+                    boardUserInfo.setBattachSrc(boardUserInfo.getBattach().substring(6));
+                }
+            }
 //			System.out.println("CoffeeController " +returnPage+ list.get(1).getBattach());
 //			System.out.println("CoffeeController " +returnPage+ list.get(1).getBattachSrc());
 			model.addAttribute("boardUser_infoList", list);
@@ -546,14 +623,14 @@ public class CoffeeController {
 		System.out.println(returnPage+" manager->"+ manager );
 		getLoginUserInfo(session, model, returnPage);
 
-		if(manager == "0") {
+		if("0".equals(manager)) {
 			List<BoardUser_info> list = bs.restoreList();
-			for (int i=0; i<list.size(); i++) {
-				if(list.get(i).getBattach()!= null) {
-					list.get(i).setBattachType(list.get(i).getBattach().substring(0, 5));
-					list.get(i).setBattachSrc(list.get(i).getBattach().substring(6));
-				}
-			}
+            for (BoardUser_info boardUserInfo : list) {
+                if (boardUserInfo.getBattach() != null) {
+                    boardUserInfo.setBattachType(boardUserInfo.getBattach().substring(0, 5));
+                    boardUserInfo.setBattachSrc(boardUserInfo.getBattach().substring(6));
+                }
+            }
 			model.addAttribute("boardUser_infoList", list);
 			// 실시간 해시태그 순위
 			getHashtagRank(model);
@@ -575,14 +652,14 @@ public class CoffeeController {
 		System.out.println(returnPage+" manager->"+ manager );
 		getLoginUserInfo(session, model, returnPage);
 
-		if(manager == "0") {
+		if("0".equals(manager)) {
 			List<BoardUser_info> list = bs.restoreList(search);
-			for (int i=0; i<list.size(); i++) {
-				if(list.get(i).getBattach()!= null) {
-					list.get(i).setBattachType(list.get(i).getBattach().substring(0, 5));
-					list.get(i).setBattachSrc(list.get(i).getBattach().substring(6));
-				}
-			}
+            for (BoardUser_info boardUserInfo : list) {
+                if (boardUserInfo.getBattach() != null) {
+                    boardUserInfo.setBattachType(boardUserInfo.getBattach().substring(0, 5));
+                    boardUserInfo.setBattachSrc(boardUserInfo.getBattach().substring(6));
+                }
+            }
 			model.addAttribute("boardUser_infoList", list);
 			model.addAttribute("search", search);
 			// 실시간 해시태그 순위
@@ -615,14 +692,14 @@ public class CoffeeController {
 		System.out.println(returnPage+" manager->"+ manager );
 		getLoginUserInfo(session, model, returnPage);
 
-		if(manager == "0") {
+		if("0".equals(manager)) {
 			List<BoardUser_info> list = bs.accusationList();
-			for (int i=0; i<list.size(); i++) {
-				if(list.get(i).getBattach()!= null) {
-					list.get(i).setBattachType(list.get(i).getBattach().substring(0, 5));
-					list.get(i).setBattachSrc(list.get(i).getBattach().substring(6));
-				}
-			}
+            for (BoardUser_info boardUserInfo : list) {
+                if (boardUserInfo.getBattach() != null) {
+                    boardUserInfo.setBattachType(boardUserInfo.getBattach().substring(0, 5));
+                    boardUserInfo.setBattachSrc(boardUserInfo.getBattach().substring(6));
+                }
+            }
 //			System.out.println(list.get(0).getBcode());
 			model.addAttribute("boardUser_infoList", list);
 			// 실시간 해시태그 순위
@@ -645,14 +722,14 @@ public class CoffeeController {
 		System.out.println(returnPage+" manager->"+ manager );
 		getLoginUserInfo(session, model, returnPage);
 
-		if(manager == "0") {
+		if("0".equals(manager)) {
 			List<BoardUser_info> list = bs.accusationList(search);
-			for (int i=0; i<list.size(); i++) {
-				if(list.get(i).getBattach()!= null) {
-					list.get(i).setBattachType(list.get(i).getBattach().substring(0, 5));
-					list.get(i).setBattachSrc(list.get(i).getBattach().substring(6));
-				}
-			}
+            for (BoardUser_info boardUserInfo : list) {
+                if (boardUserInfo.getBattach() != null) {
+                    boardUserInfo.setBattachType(boardUserInfo.getBattach().substring(0, 5));
+                    boardUserInfo.setBattachSrc(boardUserInfo.getBattach().substring(6));
+                }
+            }
 //				System.out.println(list.get(0).getBcode());
 			model.addAttribute("boardUser_infoList", list);
 			model.addAttribute("search", search);
@@ -690,7 +767,7 @@ public class CoffeeController {
 //		System.out.println(returnPage+" manager->"+ manager );
 //		getLoginUserInfo(session, model, returnPage);
 //
-//		if(manager == "0") {
+//		if("0".equals(manager)) {
 //			List<ReportUser_infoBoard> list = rs.accusationList();
 //			for (int i=0; i<list.size(); i++) {
 //				if(list.get(i).getBattach()!= null) {
@@ -724,7 +801,7 @@ public class CoffeeController {
 //		System.out.println(returnPage+" manager->"+ manager );
 //		getLoginUserInfo(session, model, returnPage);
 //
-//		if(manager == "0") {
+//		if("0".equals(manager)) {
 //			List<ReportUser_infoBoard> list = rs.accusationList(search);
 //			for (int i=0; i<list.size(); i++) {
 //				if(list.get(i).getBattach()!= null) {
@@ -781,7 +858,7 @@ public class CoffeeController {
 //		System.out.println(returnPage+" manager->"+ manager );
 //		getLoginUserInfo(session, model, returnPage);
 //
-//		if(manager == "0") {
+//		if("0".equals(manager)) {
 //			List<ReportUser_infoBoard> list = rs.uncensoredList();
 //			for (int i=0; i<list.size(); i++) {
 //				if(list.get(i).getBattach()!= null) {
@@ -812,7 +889,7 @@ public class CoffeeController {
 //		System.out.println(returnPage+" manager->"+ manager );
 //		getLoginUserInfo(session, model, returnPage);
 //
-//		if(manager == "0") {
+//		if("0".equals(manager)) {
 //			List<ReportUser_infoBoard> list = rs.uncensoredList(search);
 //			for (int i=0; i<list.size(); i++) {
 //				if(list.get(i).getBattach()!= null) {
